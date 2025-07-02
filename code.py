@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.express as px
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 
 st.set_page_config(layout="wide")
@@ -70,6 +71,20 @@ if uploaded_file is not None:
     df['weekday'] = df['Date'].dt.weekday
     df['month'] = df['Date'].dt.month
 
+    # 3D Scatter Plot for Engagement by Weekday, Month, and Platform
+    st.subheader("🌐 3D Visualization of Engagement by Weekday and Month")
+    fig_3d = px.scatter_3d(
+        df,
+        x='weekday',
+        y='month',
+        z='Engagement',
+        color='Platform',
+        size='Engagement',
+        hover_data=['Hashtag', 'Post_Type', 'Date'],
+        title="Engagement by Weekday, Month, and Platform"
+    )
+    st.plotly_chart(fig_3d, use_container_width=True)
+
     # Machine Learning Section
     st.subheader("🤖 Engagement Prediction using Random Forest")
     X = pd.get_dummies(df[['Hashtag', 'Platform', 'Post_Type', 'weekday', 'month']], drop_first=True)
@@ -80,17 +95,28 @@ if uploaded_file is not None:
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
-    # Manually calculate RMSE to avoid 'squared' argument issue
     mse = mean_squared_error(y_test, y_pred)
     rmse = mse ** 0.5
     r2 = r2_score(y_test, y_pred)
     st.markdown(f"- RMSE: `{rmse:.2f}`\n- R^2 Score: `{r2:.2f}`")
 
-    importances = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=True).tail(10)
-    fig4, ax4 = plt.subplots()
-    importances.plot(kind='barh', ax=ax4)
-    ax4.set_title("Top 10 Feature Importances")
-    st.pyplot(fig4)
+    # 3D Bar Chart for Top 10 Feature Importances
+    st.subheader("🌟 Top 10 Feature Importances (3D Bar Chart)")
+    import plotly.graph_objects as go
+    importances = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False).head(10)
+
+    fig3d_bar = go.Figure(data=[go.Bar(
+        x=importances.index,
+        y=importances.values,
+        marker_color='indianred'
+    )])
+    fig3d_bar.update_layout(
+        title="Top 10 Feature Importances",
+        xaxis_title="Features",
+        yaxis_title="Importance",
+        yaxis=dict(range=[0, importances.values.max() * 1.1])
+    )
+    st.plotly_chart(fig3d_bar, use_container_width=True)
 
 else:
     st.info("Please upload a CSV file to get started.")
